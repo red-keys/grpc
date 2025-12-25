@@ -670,7 +670,8 @@ static tsi_result peer_from_x509(X509* cert, int include_certificate_type,
 // Loads an in-memory PEM certificate chain into the SSL context.
 static tsi_result ssl_ctx_use_certificate_chain(SSL_CTX* context,
                                                 const char* pem_cert_chain,
-                                                size_t pem_cert_chain_size) {
+                                                size_t pem_cert_chain_size,
+                                              const char* certificate_usage) {
   tsi_result result = TSI_OK;
   X509* certificate = nullptr;
   BIO* pem;
@@ -685,10 +686,26 @@ static tsi_result ssl_ctx_use_certificate_chain(SSL_CTX* context,
       result = TSI_INVALID_ARGUMENT;
       break;
     }
-    if (!SSL_CTX_use_certificate(context, certificate)) {
-      result = TSI_INVALID_ARGUMENT;
-      break;
+
+    if(0 == strcmp(certificate_usage,"sign")) {
+      if (!SSL_CTX_use_sign_certificate(context, certificate)) {
+            result = TSI_INVALID_ARGUMENT;
+            break;
+      }     
     }
+    else if(0 == strcmp(certificate_usage,"enc")) {
+      if (!SSL_CTX_use_enc_certificate(context, certificate)) {
+            result = TSI_INVALID_ARGUMENT;
+            break;
+      }     
+    }
+    else {
+      if (!SSL_CTX_use_certificate(context, certificate)) {
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
+    }
+
     while (true) {
       X509* certificate_authority =
           PEM_read_bio_X509(pem, nullptr, nullptr, const_cast<char*>(""));
@@ -716,7 +733,8 @@ static tsi_result ssl_ctx_use_certificate_chain(SSL_CTX* context,
 #if !defined(OPENSSL_IS_BORINGSSL) && !defined(OPENSSL_NO_ENGINE)
 static tsi_result ssl_ctx_use_engine_private_key(SSL_CTX* context,
                                                  const char* pem_key,
-                                                 size_t pem_key_size) {
+                                                 size_t pem_key_size,
+                                                 const char* certificate_usage) {
   tsi_result result = TSI_OK;
   EVP_PKEY* private_key = nullptr;
   ENGINE* engine = nullptr;
@@ -775,10 +793,27 @@ static tsi_result ssl_ctx_use_engine_private_key(SSL_CTX* context,
       result = TSI_INVALID_ARGUMENT;
       break;
     }
-    if (!SSL_CTX_use_PrivateKey(context, private_key)) {
-      LOG(ERROR) << "SSL_CTX_use_PrivateKey failed";
-      result = TSI_INVALID_ARGUMENT;
-      break;
+
+    if(0 == strcmp(certificate_usage,"sign")) {
+      if (!SSL_CTX_use_sign_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_sign_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
+    }
+    else if(0 == strcmp(certificate_usage,"enc")) {
+      if (!SSL_CTX_use_enc_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_enc_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
+    }
+    else {
+      if (!SSL_CTX_use_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
     }
   } while (0);
   if (engine != nullptr) ENGINE_free(engine);
@@ -790,7 +825,8 @@ static tsi_result ssl_ctx_use_engine_private_key(SSL_CTX* context,
 
 static tsi_result ssl_ctx_use_pem_private_key(SSL_CTX* context,
                                               const char* pem_key,
-                                              size_t pem_key_size) {
+                                              size_t pem_key_size,
+                                              const char* certificate_usage) {
   tsi_result result = TSI_OK;
   EVP_PKEY* private_key = nullptr;
   BIO* pem;
@@ -804,9 +840,26 @@ static tsi_result ssl_ctx_use_pem_private_key(SSL_CTX* context,
       result = TSI_INVALID_ARGUMENT;
       break;
     }
-    if (!SSL_CTX_use_PrivateKey(context, private_key)) {
-      result = TSI_INVALID_ARGUMENT;
-      break;
+    if(0 == strcmp(certificate_usage,"sign")) {
+      if (!SSL_CTX_use_sign_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_sign_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
+    }
+    else if(0 == strcmp(certificate_usage,"enc")) {
+      if (!SSL_CTX_use_enc_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_enc_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
+    }
+    else {
+      if (!SSL_CTX_use_PrivateKey(context, private_key)) {
+        LOG(ERROR) << "SSL_CTX_use_PrivateKey failed";
+        result = TSI_INVALID_ARGUMENT;
+        break;
+      }
     }
   } while (false);
   if (private_key != nullptr) EVP_PKEY_free(private_key);
@@ -816,15 +869,16 @@ static tsi_result ssl_ctx_use_pem_private_key(SSL_CTX* context,
 
 // Loads an in-memory PEM private key into the SSL context.
 static tsi_result ssl_ctx_use_private_key(SSL_CTX* context, const char* pem_key,
-                                          size_t pem_key_size) {
+                                          size_t pem_key_size,
+                                          const char* certificate_usage) {
 // BoringSSL does not have ENGINE support
 #if !defined(OPENSSL_IS_BORINGSSL) && !defined(OPENSSL_NO_ENGINE)
   if (strncmp(pem_key, kSslEnginePrefix, strlen(kSslEnginePrefix)) == 0) {
-    return ssl_ctx_use_engine_private_key(context, pem_key, pem_key_size);
+    return ssl_ctx_use_engine_private_key(context, pem_key, pem_key_size, certificate_usage);
   } else
 #endif  // !defined(OPENSSL_IS_BORINGSSL) && !defined(OPENSSL_NO_ENGINE)
   {
-    return ssl_ctx_use_pem_private_key(context, pem_key, pem_key_size);
+    return ssl_ctx_use_pem_private_key(context, pem_key, pem_key_size, certificate_usage);
   }
 }
 
@@ -917,24 +971,61 @@ static tsi_result populate_ssl_context(
     SSL_CTX* context, const tsi_ssl_pem_key_cert_pair* key_cert_pair,
     const char* cipher_list) {
   tsi_result result = TSI_OK;
+ 
   if (key_cert_pair != nullptr) {
-    if (key_cert_pair->cert_chain != nullptr) {
+    if (key_cert_pair->sign_cert_chain != nullptr && 0 != strcmp("",key_cert_pair->sign_cert_chain)) {
+      result = ssl_ctx_use_certificate_chain(context, key_cert_pair->sign_cert_chain,
+                                             strlen(key_cert_pair->sign_cert_chain),"sign");
+      if (result != TSI_OK) {
+        LOG(ERROR) << "Invalid sign cert chain file.";
+        return result;
+      }
+    }
+    if (key_cert_pair->enc_cert_chain != nullptr && 0 != strcmp("",key_cert_pair->enc_cert_chain)) {
+      result = ssl_ctx_use_certificate_chain(context, key_cert_pair->enc_cert_chain,
+                                             strlen(key_cert_pair->enc_cert_chain),"enc");
+      if (result != TSI_OK) {
+        LOG(ERROR) << "Invalid enc cert chain file.";
+        return result;
+      }
+    }
+    if (key_cert_pair->sign_private_key != nullptr && 0 != strcmp("",key_cert_pair->sign_private_key)) {
+      result = ssl_ctx_use_private_key(context, key_cert_pair->sign_private_key,
+                                       strlen(key_cert_pair->sign_private_key),"sign");
+      if (result != TSI_OK || !SSL_CTX_check_private_key(context)) {
+        LOG(ERROR) << "Invalid sign private key.";
+        return result != TSI_OK ? result : TSI_INVALID_ARGUMENT;
+      }
+    }
+    if (key_cert_pair->enc_private_key != nullptr && 0 != strcmp("",key_cert_pair->enc_private_key)) {
+      result = ssl_ctx_use_private_key(context, key_cert_pair->enc_private_key,
+                                       strlen(key_cert_pair->enc_private_key),"enc");
+      if (result != TSI_OK || !SSL_CTX_check_private_key(context)) {
+        LOG(ERROR) << "Invalid enc private key.";
+        return result != TSI_OK ? result : TSI_INVALID_ARGUMENT;
+      }
+    }
+  }
+
+  if (key_cert_pair != nullptr) {
+    if (key_cert_pair->cert_chain != nullptr && 0 != strcmp("",key_cert_pair->cert_chain)) {
       result = ssl_ctx_use_certificate_chain(context, key_cert_pair->cert_chain,
-                                             strlen(key_cert_pair->cert_chain));
+                                             strlen(key_cert_pair->cert_chain),"");
       if (result != TSI_OK) {
         LOG(ERROR) << "Invalid cert chain file.";
         return result;
       }
     }
-    if (key_cert_pair->private_key != nullptr) {
+    if (key_cert_pair->private_key != nullptr && 0 != strcmp("",key_cert_pair->private_key)) {
       result = ssl_ctx_use_private_key(context, key_cert_pair->private_key,
-                                       strlen(key_cert_pair->private_key));
+                                       strlen(key_cert_pair->private_key),"");
       if (result != TSI_OK || !SSL_CTX_check_private_key(context)) {
         LOG(ERROR) << "Invalid private key.";
         return result != TSI_OK ? result : TSI_INVALID_ARGUMENT;
       }
     }
   }
+
   if ((cipher_list != nullptr) &&
       !SSL_CTX_set_cipher_list(context, cipher_list)) {
     LOG(ERROR) << "Invalid cipher list: " << cipher_list;
@@ -2481,10 +2572,19 @@ tsi_result tsi_create_ssl_client_handshaker_factory_with_options(
     return TSI_INVALID_ARGUMENT;
   }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
-  ssl_context = SSL_CTX_new(TLS_method());
-#else
-  ssl_context = SSL_CTX_new(TLSv1_2_method());
+
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000  
+  ssl_context = SSL_CTX_new(TLS_method());  
+#else  
+  ssl_context = SSL_CTX_new(TLSv1_2_method());  
+#endif
+
+#if defined(OPENSSL_IS_TONGSUO)
+  if (options->pem_key_cert_pair->sign_cert_chain != nullptr) {
+    ssl_context = SSL_CTX_new(NTLS_method());  
+    SSL_CTX_enable_ntls(ssl_context);
+  }
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(LIBRESSL_VERSION_NUMBER)
   SSL_CTX_set_options(ssl_context, SSL_OP_NO_RENEGOTIATION);
@@ -2722,11 +2822,20 @@ tsi_result tsi_create_ssl_server_handshaker_factory_with_options(
 
   for (i = 0; i < options->num_key_cert_pairs; i++) {
     do {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000  
       impl->ssl_contexts[i] = SSL_CTX_new(TLS_method());
 #else
       impl->ssl_contexts[i] = SSL_CTX_new(TLSv1_2_method());
 #endif
+
+#if defined(OPENSSL_IS_TONGSUO)
+      if (options->pem_key_cert_pairs[0].sign_cert_chain != nullptr) {
+        impl->ssl_contexts[i] = SSL_CTX_new(NTLS_method());  
+        SSL_CTX_enable_ntls(impl->ssl_contexts[i]);
+      }
+#endif
+
 #if OPENSSL_VERSION_NUMBER >= 0x10101000 && !defined(LIBRESSL_VERSION_NUMBER)
       SSL_CTX_set_options(impl->ssl_contexts[i], SSL_OP_NO_RENEGOTIATION);
 #endif
@@ -2848,9 +2957,17 @@ tsi_result tsi_create_ssl_server_handshaker_factory_with_options(
       }
 #endif
 
-      result = tsi_ssl_extract_x509_subject_names_from_pem_cert(
-          options->pem_key_cert_pairs[i].cert_chain,
-          &impl->ssl_context_x509_subject_names[i]);
+
+      if (options->pem_key_cert_pairs[i].sign_cert_chain != nullptr) {
+        result = tsi_ssl_extract_x509_subject_names_from_pem_cert(
+            options->pem_key_cert_pairs[i].sign_cert_chain,
+            &impl->ssl_context_x509_subject_names[i]);
+      }
+      else {
+        result = tsi_ssl_extract_x509_subject_names_from_pem_cert(
+            options->pem_key_cert_pairs[i].cert_chain,
+            &impl->ssl_context_x509_subject_names[i]);
+      } 
       if (result != TSI_OK) break;
 
       SSL_CTX_set_tlsext_servername_callback(

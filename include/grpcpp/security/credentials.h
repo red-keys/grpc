@@ -164,6 +164,11 @@ struct SslCredentialsOptions {
   /// This parameter can be empty if the client does not have a certificate
   /// chain.
   grpc::string pem_cert_chain;
+
+  grpc::string pem_sign_private_key;
+  grpc::string pem_sign_cert_chain;
+  grpc::string pem_enc_private_key;
+  grpc::string pem_enc_cert_chain;
 };
 
 /// Options used to build GoogleDefaultCredentials.

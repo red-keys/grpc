@@ -156,6 +156,11 @@ void grpc_tsi_ssl_pem_key_cert_pairs_destroy(tsi_ssl_pem_key_cert_pair* kp,
                                              size_t num_key_cert_pairs) {
   if (kp == nullptr) return;
   for (size_t i = 0; i < num_key_cert_pairs; i++) {
+    gpr_free(const_cast<char*>(kp[i].sign_private_key));
+    gpr_free(const_cast<char*>(kp[i].sign_cert_chain));
+    gpr_free(const_cast<char*>(kp[i].enc_private_key));
+    gpr_free(const_cast<char*>(kp[i].enc_cert_chain));
+
     gpr_free(const_cast<char*>(kp[i].private_key));
     gpr_free(const_cast<char*>(kp[i].cert_chain));
   }

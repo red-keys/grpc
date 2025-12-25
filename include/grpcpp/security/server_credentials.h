@@ -48,6 +48,10 @@ struct SslServerCredentialsOptions {
   struct PemKeyCertPair {
     std::string private_key;
     std::string cert_chain;
+    std::string sign_private_key;
+    std::string sign_cert_chain;
+    std::string enc_private_key;
+    std::string enc_cert_chain;   
   };
   std::string pem_root_certs;
   std::vector<PemKeyCertPair> pem_key_cert_pairs;

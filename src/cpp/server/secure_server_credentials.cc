@@ -112,7 +112,11 @@ std::shared_ptr<ServerCredentials> SslServerCredentials(
   std::vector<grpc_ssl_pem_key_cert_pair> pem_key_cert_pairs;
   for (const auto& key_cert_pair : options.pem_key_cert_pairs) {
     grpc_ssl_pem_key_cert_pair p = {key_cert_pair.private_key.c_str(),
-                                    key_cert_pair.cert_chain.c_str()};
+                                    key_cert_pair.cert_chain.c_str(),
+                                    key_cert_pair.sign_private_key.c_str(),
+                                    key_cert_pair.sign_cert_chain.c_str(),
+                                    key_cert_pair.enc_private_key.c_str(),
+                                    key_cert_pair.enc_cert_chain.c_str()};
     pem_key_cert_pairs.push_back(p);
   }
   grpc_server_credentials* c_creds = grpc_ssl_server_credentials_create_ex(

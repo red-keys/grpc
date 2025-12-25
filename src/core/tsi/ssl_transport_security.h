@@ -112,6 +112,11 @@ struct tsi_ssl_pem_key_cert_pair {
   // cert_chain is the NULL-terminated string containing the PEM encoding of
   // the client's certificate chain.
   const char* cert_chain;
+
+  const char* sign_private_key;
+  const char* enc_private_key;
+  const char* sign_cert_chain;
+  const char* enc_cert_chain;
 };
 // TO BE DEPRECATED.
 // Creates a client handshaker factory.

@@ -105,11 +105,14 @@ std::shared_ptr<ChannelCredentials> SslCredentials(
     const SslCredentialsOptions& options) {
   grpc::internal::GrpcLibrary init;  // To call grpc_init().
   grpc_ssl_pem_key_cert_pair pem_key_cert_pair = {
-      options.pem_private_key.c_str(), options.pem_cert_chain.c_str()};
+      options.pem_private_key.c_str(), options.pem_cert_chain.c_str(),
+      options.pem_sign_private_key.c_str(), options.pem_sign_cert_chain.c_str(),
+      options.pem_enc_private_key.c_str(), options.pem_enc_cert_chain.c_str()};
+    
   return WrapChannelCredentials(grpc_ssl_credentials_create(
       options.pem_root_certs.empty() ? nullptr : options.pem_root_certs.c_str(),
-      options.pem_private_key.empty() ? nullptr : &pem_key_cert_pair, nullptr,
-      nullptr));
+      (options.pem_private_key.empty() && options.pem_sign_private_key.empty()) ? nullptr : &pem_key_cert_pair, nullptr,
+      nullptr)); 
 }
 
 namespace experimental {

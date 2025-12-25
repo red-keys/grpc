@@ -402,6 +402,7 @@ DEFINE_MACROS += (
         "GRPC_XDS_USER_AGENT_VERSION_SUFFIX",
         _quote_build_define(grpc_version.VERSION),
     ),
+    ("OPENSSL_IS_TONGSUO", "1"),
 )
 
 asm_key = ""

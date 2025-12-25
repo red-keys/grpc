@@ -145,12 +145,24 @@ void grpc_ssl_credentials::build_config(
   if (pem_key_cert_pair != nullptr) {
     GRPC_CHECK_NE(pem_key_cert_pair->private_key, nullptr);
     GRPC_CHECK_NE(pem_key_cert_pair->cert_chain, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pair->sign_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pair->sign_cert_chain, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pair->enc_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pair->enc_cert_chain, nullptr);
     config_.pem_key_cert_pair = static_cast<tsi_ssl_pem_key_cert_pair*>(
         gpr_zalloc(sizeof(tsi_ssl_pem_key_cert_pair)));
     config_.pem_key_cert_pair->cert_chain =
         gpr_strdup(pem_key_cert_pair->cert_chain);
     config_.pem_key_cert_pair->private_key =
         gpr_strdup(pem_key_cert_pair->private_key);
+    config_.pem_key_cert_pair->sign_cert_chain =
+        gpr_strdup(pem_key_cert_pair->sign_cert_chain);
+    config_.pem_key_cert_pair->sign_private_key =
+        gpr_strdup(pem_key_cert_pair->sign_private_key);
+    config_.pem_key_cert_pair->enc_cert_chain =
+        gpr_strdup(pem_key_cert_pair->enc_cert_chain);
+    config_.pem_key_cert_pair->enc_private_key =
+        gpr_strdup(pem_key_cert_pair->enc_private_key);
   } else {
     config_.pem_key_cert_pair = nullptr;
   }
@@ -295,7 +307,16 @@ tsi_ssl_pem_key_cert_pair* grpc_convert_grpc_to_tsi_cert_pairs(
     tsi_pairs = static_cast<tsi_ssl_pem_key_cert_pair*>(
         gpr_zalloc(num_key_cert_pairs * sizeof(tsi_ssl_pem_key_cert_pair)));
   }
-  for (size_t i = 0; i < num_key_cert_pairs; i++) {
+  for (size_t i = 0; i < num_key_cert_pairs; i++) {         
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].sign_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].sign_cert_chain, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].enc_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].enc_cert_chain, nullptr);      
+    tsi_pairs[i].sign_cert_chain = gpr_strdup(pem_key_cert_pairs[i].sign_cert_chain);
+    tsi_pairs[i].sign_private_key = gpr_strdup(pem_key_cert_pairs[i].sign_private_key);
+    tsi_pairs[i].enc_cert_chain = gpr_strdup(pem_key_cert_pairs[i].enc_cert_chain);
+    tsi_pairs[i].enc_private_key = gpr_strdup(pem_key_cert_pairs[i].enc_private_key); 
+
     GRPC_CHECK_NE(pem_key_cert_pairs[i].private_key, nullptr);
     GRPC_CHECK_NE(pem_key_cert_pairs[i].cert_chain, nullptr);
     tsi_pairs[i].cert_chain = gpr_strdup(pem_key_cert_pairs[i].cert_chain);
@@ -342,10 +363,22 @@ grpc_ssl_server_certificate_config* grpc_ssl_server_certificate_config_create(
   for (size_t i = 0; i < num_key_cert_pairs; i++) {
     GRPC_CHECK_NE(pem_key_cert_pairs[i].private_key, nullptr);
     GRPC_CHECK_NE(pem_key_cert_pairs[i].cert_chain, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].sign_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].sign_cert_chain, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].enc_private_key, nullptr);
+    GRPC_CHECK_NE(pem_key_cert_pairs[i].enc_cert_chain, nullptr);
     config->pem_key_cert_pairs[i].cert_chain =
         gpr_strdup(pem_key_cert_pairs[i].cert_chain);
     config->pem_key_cert_pairs[i].private_key =
         gpr_strdup(pem_key_cert_pairs[i].private_key);
+    config->pem_key_cert_pairs[i].sign_cert_chain =
+        gpr_strdup(pem_key_cert_pairs[i].sign_cert_chain);
+    config->pem_key_cert_pairs[i].sign_private_key =
+        gpr_strdup(pem_key_cert_pairs[i].sign_private_key);
+    config->pem_key_cert_pairs[i].enc_cert_chain =
+        gpr_strdup(pem_key_cert_pairs[i].enc_cert_chain);
+    config->pem_key_cert_pairs[i].enc_private_key =
+        gpr_strdup(pem_key_cert_pairs[i].enc_private_key);
   }
   return config;
 }
